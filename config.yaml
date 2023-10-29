@@ -1,8 +1,0 @@
-app:
-  port: 3000
-
-db:
-  user: root
-  password: ytrewq
-  dbname: honeypot
-  timeout: 2000
