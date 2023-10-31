@@ -3,6 +3,8 @@ package app
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/tnuanchuay/honeypot/honeypot/catch"
+	"github.com/tnuanchuay/honeypot/honeypot/pot"
 )
 
 var app *fiber.App
@@ -13,8 +15,10 @@ func Init() {
 	})
 
 	app.Use(logger.New())
+	app.Use(catch.Handler())
 
-	app.Use(loggerMiddleware)
+	app.Get("/honey/new", pot.CreateGetHandler())
+	app.Post("/honey/new", pot.CreatePostHandler())
 }
 
 func Get(path string, handler fiber.Handler) {

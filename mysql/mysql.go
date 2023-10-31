@@ -6,8 +6,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/tnuanchuay/honeypot/log"
-	"strconv"
+	"github.com/gofiber/fiber/v2/log"
 	"time"
 )
 
@@ -42,7 +41,32 @@ func open(user, password, dbname string) (*sql.DB, error) {
 	return db, nil
 }
 
-func Execute(query string, args ...interface{}) error {
+//func getTimeout () time.Duration {
+//	t, err := strconv.Atoi(getTimeout())
+//	if err != nil {
+//		return 60 * time.Second
+//	}
+//
+//	timeout := time.Duration(t) * time.Millisecond
+//}
+
+func Query(q string, args ...any) (*sql.Rows, error) {
+	if db == nil {
+		return nil, ErrDatabaseIsNotInitialized
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), getTimeout())
+	defer cancel()
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn.QueryContext(ctx, q, args...)
+}
+
+func Execute(q string, args ...any) error {
 	if db == nil {
 		return ErrDatabaseIsNotInitialized
 	}
@@ -53,23 +77,15 @@ func Execute(query string, args ...interface{}) error {
 	}
 	defer conn.Close()
 
-	timeout, err := strconv.Atoi(getTimeout())
-	if err != nil {
-		timeout = 60000
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), getTimeout())
+	defer cancel()
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
-
-	if len(args) == 0 {
-		_, err = conn.ExecContext(ctx, query)
-	} else {
-		_, err = conn.ExecContext(ctx, query, args)
-	}
+	_, err = conn.ExecContext(ctx, q, args...)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 func Init(user, password, dbname string) {
