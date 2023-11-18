@@ -14,7 +14,26 @@ var db *sql.DB
 
 var ErrDatabaseIsNotInitialized = errors.New("the database is not initialized")
 
-func open(user, password, dbname string) (*sql.DB, error) {
+func init() {
+	go func() {
+		for {
+			<-time.After(1 * time.Second)
+			if db == nil {
+				continue
+			}
+
+			if err := db.Ping(); err != nil {
+				continue
+			}
+
+			stat := db.Stats()
+			log.Debug("open-conn=", stat.OpenConnections, "\tin-use=", stat.InUse, "\tidle=", stat.Idle, "\twait=", stat.WaitCount)
+		}
+	}()
+}
+
+func open(user, password, dbname string, maxConn, maxIdleConn int, connMaxLife time.Duration) (*sql.DB, error) {
+	log.Info("init db with parameters\t", maxConn, maxIdleConn, connMaxLife)
 	connStr := fmt.Sprintf("%s:%s@/", user, password)
 	var err error
 	db, err = sql.Open("mysql", connStr)
@@ -34,21 +53,13 @@ func open(user, password, dbname string) (*sql.DB, error) {
 	}
 
 	// See "Important settings" section.
-	db.SetConnMaxLifetime(time.Minute * 3)
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(maxConn)
+	db.SetMaxIdleConns(maxIdleConn)
+	db.SetConnMaxLifetime(connMaxLife)
+	db.SetConnMaxIdleTime(0)
 
 	return db, nil
 }
-
-//func getTimeout () time.Duration {
-//	t, err := strconv.Atoi(getTimeout())
-//	if err != nil {
-//		return 60 * time.Second
-//	}
-//
-//	timeout := time.Duration(t) * time.Millisecond
-//}
 
 func Query(q string, args ...any) (*sql.Rows, error) {
 	if db == nil {
@@ -58,12 +69,7 @@ func Query(q string, args ...any) (*sql.Rows, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), getTimeout())
 	defer cancel()
 
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn.QueryContext(ctx, q, args...)
+	return db.QueryContext(ctx, q, args...)
 }
 
 func Execute(q string, args ...any) error {
@@ -71,31 +77,22 @@ func Execute(q string, args ...any) error {
 		return ErrDatabaseIsNotInitialized
 	}
 
-	conn, err := db.Conn(context.Background())
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
 	ctx, cancel := context.WithTimeout(context.Background(), getTimeout())
 	defer cancel()
 
-	_, err = conn.ExecContext(ctx, q, args...)
-	if err != nil {
-		return err
-	}
+	_, err := db.ExecContext(ctx, q, args...)
 
-	return ctx.Err()
+	return err
 }
 
-func Init(user, password, dbname string) {
+func Init(user, password, dbname string, maxConn, maxIdleConn int, connMaxLife time.Duration) {
 	log.Debug("Initial database")
-	_, err := open(user, password, dbname)
+	_, err := open(user, password, dbname, maxConn, maxIdleConn, connMaxLife)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func InitWithDefault() {
+func InitWithConfig() {
 	Init(Config())
 }

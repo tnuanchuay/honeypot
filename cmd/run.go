@@ -9,7 +9,7 @@ import (
 
 func Run() {
 	config.Init()
-	mysql.InitWithDefault()
+	mysql.InitWithConfig()
 	honeypot.Init()
 	app.Init()
 	app.Run()

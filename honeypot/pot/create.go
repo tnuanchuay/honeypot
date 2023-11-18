@@ -2,7 +2,6 @@ package pot
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/tnuanchuay/honeypot/mysql"
@@ -48,6 +47,19 @@ func CreateHandler(ctx *fiber.Ctx, method string) {
 		return
 	}
 
+	pot.CreateDate = time.Now()
+
+	exists, err := FindPotByPath(pot.Path)
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+
+	if exists != nil {
+		ctx.Status(http.StatusConflict)
+		return
+	}
+
 	err = Create(pot)
 	if err != nil {
 		log.Error(err)
@@ -59,8 +71,7 @@ func CreateHandler(ctx *fiber.Ctx, method string) {
 }
 
 func Create(pot Pot) error {
-	fmt.Println(pot)
-	err := mysql.Execute(`INSERT INTO POT(path, redirect_to, user, create_date) VALUES(?, ?, ?, ?)`, pot.Path, pot.Redirect, pot.User, time.Now())
+	err := mysql.Execute(`INSERT INTO POT(path, redirect_to, user, create_at) VALUES(?, ?, ?, ?)`, pot.Path, pot.Redirect, pot.User, pot.CreateDate)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package pot
 import (
 	"errors"
 	"github.com/tnuanchuay/honeypot/mysql"
+	"time"
 )
 
 var (
@@ -10,9 +11,11 @@ var (
 )
 
 type Pot struct {
-	Path     string `json:"path" form:"path" query:"path"`
-	Redirect string `json:"redirect" form:"redirect" query:"redirect"`
-	User     string `json:"user" form:"user" query:"user"`
+	Id         int       `json:"id" form:"id" query:"id"`
+	Path       string    `json:"path" form:"path" query:"path"`
+	Redirect   string    `json:"redirect" form:"redirect" query:"redirect"`
+	User       string    `json:"user" form:"user" query:"user"`
+	CreateDate time.Time `json:"create_at" form:"create_date" query:"create_date"`
 }
 
 func (p Pot) Validate() error {
@@ -35,7 +38,7 @@ CREATE TABLE IF NOT EXISTS POT (
 		path 				VARCHAR(200)				NOT NULL,
 		redirect_to 		VARCHAR(1000) 				NOT NULL,
 		user	 			VARCHAR(100) 				NOT NULL,
-		create_date 		TIMESTAMP 					NOT NULL
+		create_at 			TIMESTAMP 					NOT NULL
 	);
 `)
 

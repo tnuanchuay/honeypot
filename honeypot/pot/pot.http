@@ -1,5 +1,5 @@
 ### Create honey should create hoeny in database
-GET localhost:3000/honey/new?path=qwerty/qwerty&redirect=www.google.com&user=tester
+GET localhost:3000/honey/new?path=/qwerty/qwerty&redirect=www.google.com&user=tester
 
 ### Create honey without user should return 400
 GET localhost:3000/honey/new?path=qwerty/qwerty&redirect=www.google.com
