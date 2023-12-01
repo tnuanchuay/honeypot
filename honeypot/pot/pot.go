@@ -32,7 +32,7 @@ func (p Pot) Validate() error {
 }
 
 func CreateTable() {
-	err := mysql.Execute(`
+	_, err := mysql.Execute(`
 CREATE TABLE IF NOT EXISTS POT (
 		id 					INT 			PRIMARY KEY NOT NULL 	AUTO_INCREMENT,
 		path 				VARCHAR(200)				NOT NULL,

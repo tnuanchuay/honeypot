@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/tnuanchuay/honeypot/honeypot/ipgeo"
 	"github.com/tnuanchuay/honeypot/honeypot/pot"
 	"github.com/tnuanchuay/honeypot/mysql"
 	"net/http"
@@ -39,26 +40,30 @@ func CreateCatchIfPotExists(ctx *fiber.Ctx) {
 		return
 	}
 
-	ctx.Redirect(fmt.Sprintf("https://%s", pot.Redirect), http.StatusTemporaryRedirect)
-
+	ctx.Redirect(fmt.Sprintf("https://%s", pot.Redirect), http.StatusFound)
+	referer := ctx.Get("Referer")
 	c := Catch{
 		PotId:      pot.Id,
 		RemoteIp:   ctx.IP(),
+		Referer:    referer,
 		CreateDate: time.Now(),
 	}
 
-	go Create(c)
+	go Create(&c)
 }
 
-func Create(catch Catch) {
-	mysql.Execute(`INSERT INTO CATCH(pot_id, remote_ip, create_at) VALUES (?, ?, ?)`, catch.PotId, catch.RemoteIp, catch.CreateDate)
+func Create(catch *Catch) {
+	result, _ := mysql.Execute(`INSERT INTO CATCH(pot_id, remote_ip, referer, create_at) VALUES (?, ?, ?, ?)`, catch.PotId, catch.RemoteIp, catch.Referer, catch.CreateDate)
+	lastId, _ := result.LastInsertId()
+	catch.Id = int(lastId)
+	go ipgeo.Process(catch.Id, catch.RemoteIp)
 }
 
 func CreateWithChan(catch Catch) <-chan error {
 	c := make(chan error)
 
 	go func(ec chan error) {
-		err := mysql.Execute(`INSERT INTO CATCH(pot_id, remote_ip, create_at) VALUES (?, ?, ?)`, catch.PotId, catch.RemoteIp, catch.CreateDate)
+		_, err := mysql.Execute(`INSERT INTO CATCH(pot_id, remote_ip, create_at) VALUES (?, ?, ?)`, catch.PotId, catch.RemoteIp, catch.CreateDate)
 		if err != nil {
 			c <- err
 		}

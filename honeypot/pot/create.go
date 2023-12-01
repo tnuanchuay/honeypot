@@ -71,7 +71,7 @@ func CreateHandler(ctx *fiber.Ctx, method string) {
 }
 
 func Create(pot Pot) error {
-	err := mysql.Execute(`INSERT INTO POT(path, redirect_to, user, create_at) VALUES(?, ?, ?, ?)`, pot.Path, pot.Redirect, pot.User, pot.CreateDate)
+	_, err := mysql.Execute(`INSERT INTO POT(path, redirect_to, user, create_at) VALUES(?, ?, ?, ?)`, pot.Path, pot.Redirect, pot.User, pot.CreateDate)
 	if err != nil {
 		return err
 	}
